@@ -181,7 +181,7 @@ const useStyles = makeStyles((theme) => ({
 
 export default function GameMemberForm(props) {
     const {data} = props;
-    
+    const {propertyChanged} = props;
     const [checked, setChecked] = useState(false);
     const [compensation, setCompensation] = useState(0);
     const [extra, setExtra] = useState(0);
@@ -195,46 +195,68 @@ export default function GameMemberForm(props) {
     const handleCompensationChange = (event) =>
     {
         setCompensation(event.target.value);
+        propertyChanged(data.id, {
+            name:"compensation",
+            value:event.target.value});
     } 
 
     const handleExtraChange = (event) =>
     {
         setExtra(event.target.value);
+        propertyChanged(data.id, {
+            name:"extra",
+            value:event.target.value});
     } 
 
 
     const handlePenaltyChange = (event) =>
     {
         setPenalty(event.target.value);
+        propertyChanged(data.id, {
+            name:"penalty",
+            value:event.target.value});
     } 
 
     const handleFoulsChange = (event) =>
     {
         setFouls(event.target.value);
+        propertyChanged(data.id, {
+            name:"fouls",
+            value:event.target.value});
     } 
 
     const handleCheckedChange = (event) =>
     {
         setChecked(event.target.checked);
+        propertyChanged(data.id, {
+            name:"isActive",
+            value:event.target.checked});
     }
 
     const handleRoleChange = (value) =>
     {
         setRoleValue(value);
+        propertyChanged(data.id, {
+            name:"role",
+            value:value});
     }
 
     const handleStatementChange = (value) =>
     {
         setStatement(value);
+        propertyChanged(data.id, {
+            name:"statement",
+            value:value});
     }
 
+    
 
 
     return (
         <Card sx={{ marginBottom: "16px", background: checked ? "#484848" : "#333333"}}>
             <CardContent>
                 <div className={styles.member_container}>
-                    <div className={styles.nickname}><div className={styles.h1 + " " + styles.inline_block}>Никнейм</div>
+                    <div className={styles.nickname}><div className={styles.h1 + " " + styles.inline_block}>{data.nickname}</div>
                     <FormControlLabel sx={{color:'#EBE5D7'}} control={<Checkbox 
                                 sx={{color:'#EBE5D7', '&.Mui-checked': {
                                     color: '#EBE5D7', // Задайте нужный цвет для активного состояния

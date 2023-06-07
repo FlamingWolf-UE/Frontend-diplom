@@ -13,6 +13,7 @@ import Button from "@mui/material/Button"
 import GameMemberForm from "../components/GameMemberForm/GameMemberForm";
 import TableListEvent from "../components/TableListEvent/TableListEvent";
 import { convertUsersForSelectComponent } from "../Utils/DataConverterUtils";
+import GameBlank from "../components/GameBlank/GameBlank"
 const useStyles = makeStyles((theme) => ({
     h1:
     {
@@ -152,12 +153,17 @@ export default function Event_Page() {
     const [time, setTime] = useState();
     const [confirmDialiogOpen, setConfirmDialogOpen] = useState(false);
     const [unsubscribeDialogOpen, setUnsubscribeDialogOpen] = useState(false);
+    const [startEventDialogOpen, setStartEventDialogOpen] = useState(false);
+
+
+
     const [isChecked, setIsChecked] = useState(false);
     const [currentLoggedUserData, setCurrentLoggedUserData] = useState();
     const [userRole, setUserRole] = useState();
     const [mapByTablesIfDistributed, setMapByTablesIfDistributed] = useState();
     const [leads, setLeads] = useState();
-
+    const [userId, setUserId] = useState();
+    const [isUserShouldManageTable, setIsUserShouldManageTable] = useState();
     useEffect(() => {
         const abortController = new AbortController();
         async function fetchEventDetails() {
@@ -165,13 +171,22 @@ export default function Event_Page() {
             const isUserRegistered = await DataAccessService.isLoggedUserRegisteredInEventById(eventId, abortController.signal);
             const currentUserData = await AuthenticationService.getCurrentLoggedUserSimpleData(abortController.signal);
             const userRole = await AuthenticationService.getUserRole();
+            const uId = await AuthenticationService.getUserId();
+            setUserId(uId);
             console.log(userRole);
             setUserRole(userRole);
             setCurrentLoggedUserData(currentUserData);
             setEventDetails(data);
-            console.log(data.distributed);
-            
             setIsChecked(isUserRegistered);
+
+
+            if (data.distributed) {
+                const leadsData = await DataAccessService.getLeads();
+                setLeads(leadsData);
+            }
+
+
+
             console.log(data);
             const date = parseISO(data.datetime);
             const timeZoneOffset = 10 * 60; // Смещение часового пояса в минутах (+10:00)
@@ -208,15 +223,25 @@ export default function Event_Page() {
                 return acc;
             }, {});
             const groupedByTableNumberArray = Object.values(groupedByTableNumber);
-            setMapByTablesIfDistributed(groupedByTableNumberArray);
+
+            console.log(userRole);
+            console.log(eventDetails.state);
+            if (eventDetails?.state === "Начато" && userRole?.description === "ROLE_LEAD") {
+                var tables = groupedByTableNumberArray.filter(array => array[0].leadId === userId);
+
+                setIsUserShouldManageTable(true);
+                setMapByTablesIfDistributed(tables);
+
+            }
+            else {
+                setMapByTablesIfDistributed(groupedByTableNumberArray);
+
+            }
 
         }
 
 
     }, [eventDetails?.distributed]);
-
-
-
 
     const handleConfirmDialogConfirm = async () => {
 
@@ -258,9 +283,28 @@ export default function Event_Page() {
         setConfirmDialogOpen(false);
     }
 
+    const handleStartEventButtonClick = () => {
+        setStartEventDialogOpen(true);
+    }
+
+    const handleRejectStartEvent = () => {
+        setStartEventDialogOpen(false);
+    }
+
+    const handleAcceptStartEvent = async () => {
+        console.log(
+            "Event Started"
+        )
+        var result = await DataAccessService.startEvent(eventId);
+        if (result) {
+            setStartEventDialogOpen(false);
+        }
+
+    }
+
+
     const handleClick = () => {
         isChecked ? setUnsubscribeDialogOpen(true) : setConfirmDialogOpen(true);
-
     }
 
     const handleUserCardChecked = (userId, value) => {
@@ -269,44 +313,32 @@ export default function Event_Page() {
 
     const handleCheckedChange = () => { }
 
-    
-    const handleSelectOpen = async () => 
-    {
-        if (!leads)
-        {
-            var data = await DataAccessService.getLeads();
-            
-            setLeads(convertUsersForSelectComponent(data));
-            
-        }
-        console.log(leads);
-    }
 
-    const handleLeadChange = (value, tableNumber) => 
-    {
+    const handleSelectOpen = async () => { }
+
+    const handleLeadChange = (value, tableNumber) => {
         console.log(mapByTablesIfDistributed);
         console.log(tableNumber);
-        
-        var index = mapByTablesIfDistributed.findIndex(group => group[0].tableNumber === parseInt(tableNumber));
-        
 
-        if (index != -1)
-         {
+        var index = mapByTablesIfDistributed.findIndex(group => group[0].tableNumber === parseInt(tableNumber));
+
+
+        if (index != -1) {
             const newArray = mapByTablesIfDistributed.map(subArray => [...subArray]);
-         
-            newArray[index].map(element => {element.leadId = value;  console.log(element)});
+            newArray[index].map(element => { element.leadId = value; console.log(element) });
             console.log(newArray);
-           setMapByTablesIfDistributed(newArray);
+            setMapByTablesIfDistributed(newArray);
         }
-       
-        
+
+
     }
-  
+
     if (eventId !== "") {
         return (
 
             <Container maxWidth="lg">
                 <>
+                   { !isUserShouldManageTable && (<>
                     <div className={styles.h1 + " " + styles.text_light}>Детали мероприятия</div>
                     <div className={styles.game_data_wrapper}>
 
@@ -344,9 +376,11 @@ export default function Event_Page() {
 
                         </div>
                     </div>
-                    <div className={styles.h1 + " " + styles.text_light}>Участники</div>
+                    </>
+                    )}
+                   
                     {!(eventDetails?.distributed) && (<>
-
+                        <div className={styles.h1 + " " + styles.text_light}>Участники</div>
                         <div className={styles.event_actions_container}>
                             <div className={styles.checkbox_panel}>
                                 <FormControlLabel onClick={handleClick} sx={{ color: '#333333' }} control={<Checkbox checked={isChecked} onChange={handleCheckedChange}
@@ -366,13 +400,13 @@ export default function Event_Page() {
                             ))}
                         </div></>)}
 
-                    {(eventDetails?.distributed) && (mapByTablesIfDistributed) && (<>
-                        
+                    {(eventDetails?.distributed) && (mapByTablesIfDistributed)  && (!isUserShouldManageTable) && (<>
+
                         <div>
                             {(mapByTablesIfDistributed)?.map(element => (
-                                <TableListEvent onSelectOpen={handleSelectOpen} eventId={eventId} key={element} onLeadChange={handleLeadChange} outerValue={element[0].leadId} tableNumber={element[0].tableNumber} group={element} leads={leads}></TableListEvent>
+                                <TableListEvent onSelectOpen={handleSelectOpen} eventState={eventDetails.state} userRole={userRole.description} eventId={eventId} key={element} onLeadChange={handleLeadChange} outerValue={element[0].leadId} tableNumber={element[0].tableNumber} group={element} leads={leads}></TableListEvent>
                             ))}
-                        </div></>)} 
+                        </div></>)}
 
 
 
@@ -380,8 +414,11 @@ export default function Event_Page() {
 
 
 
-                    {userRole?.description === "ROLE_ADMIN" && (<div className={styles.event_start_button_container}>
-                        <Button variant="contained">Начать мероприятие</Button>
+                    {userRole?.description === "ROLE_ADMIN" && eventDetails.state === "Не начато" && (<div className={styles.event_start_button_container}>
+                        <Button onClick={handleStartEventButtonClick} variant="contained">Начать мероприятие</Button>
+                    </div>)}
+                    {userRole?.description === "ROLE_ADMIN" && eventDetails.state === "Начато" && (<div className={styles.event_start_button_container}>
+                        <Button onClick={handleStartEventButtonClick} variant="contained">Завершить мероприятие</Button>
                     </div>)}
                     <ConfirmDialog open={confirmDialiogOpen} OkTitle={"Да"} CancelTitle={"Нет"} onCancel={handleConfirmDialogClose} onConfirm={handleConfirmDialogConfirm} title="Участие в мероприятии"
                         info="Вы действительно хотите участвовать в данном мероприятии?
@@ -389,18 +426,17 @@ export default function Event_Page() {
                     />
                     <ConfirmDialog open={unsubscribeDialogOpen} OkTitle={"Да"} CancelTitle={"Нет"} onCancel={handleUnsubscribeDialogClose} onConfirm={handleUnsubscribeDialogConfirm} title="Участие в мероприятии"
                         info="Отписаться от мероприятия?"
-                    /></>
-                
-                {eventDetails?.state === "Начато" && userRole?.description === "ROLE_LEAD" && (
+                    />
+                    <ConfirmDialog open={startEventDialogOpen} OkTitle={"Да"} CancelTitle={"Нет"} onCancel={handleRejectStartEvent} onConfirm={handleAcceptStartEvent} title="Запуск мероприятия"
+                        info="Вы действиетельно хотите начать мероприятие? Отменить это действие будет невозможно"
+                    />
+                </>
+
+                {isUserShouldManageTable && (
                     <>
-                        <div>Мероприятие уже начато</div>
-                        <div>
-                            <GameMemberForm />
-                            <GameMemberForm />
-                            <GameMemberForm />
-                            <GameMemberForm />
-                            <GameMemberForm />
-                        </div>
+                        {(mapByTablesIfDistributed)?.map(element => (
+                            <GameBlank key={element} date={eventDetails.datetime} placeId={eventDetails.place.id} table={element}/>
+                        ))}
                     </>
                 )}
 

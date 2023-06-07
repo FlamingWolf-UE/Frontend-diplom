@@ -773,6 +773,44 @@ class DataAccessService
 
         return true;
     }
+    
+
+    async startEvent(eventId) {
+        var updates = { state:"Начато"};
+        var response = await fetch(`http://localhost:8080/events/${eventId}/start`, {
+            method:"POST",
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return true;
+    }
+
+    async SaveGame(updates)
+    {
+        var response = await fetch(`http://localhost:8080/games`, {
+            method:"POST",
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return true;
+    }
+
 }
 
 

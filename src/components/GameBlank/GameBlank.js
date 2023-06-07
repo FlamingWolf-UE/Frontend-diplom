@@ -9,6 +9,9 @@ import Button from '@mui/material/Button'
 import { useEffect, useState } from "react";
 import DataAccessService from '../../Services/DataAccessService'
 import { convertUsersForSelectComponent } from "../../Utils/DataConverterUtils";
+import GameMemberForm from "../GameMemberForm/GameMemberForm";
+import TextField from "@mui/material/TextField"
+import Card from "@mui/material/Card"
 const useStyles = makeStyles((theme) => ({
     root:
     {
@@ -335,111 +338,176 @@ const useStyles = makeStyles((theme) => ({
     },
     leadSelect:
     {
-        display:"flex",
-        flexDirection:"row",
-        marginBottom:"12px"
+        display: "flex",
+        flexDirection: "row",
+        marginBottom: "12px"
     },
     leadSelectInput:
     {
-        maxWidth:"250px",
-        width:"100%",
-        marginRight:"12px",
+        maxWidth: "250px",
+        width: "100%",
+        marginRight: "12px",
         [theme.breakpoints.down("xs")]:
         {
-            maxWidth:"100%"
+            maxWidth: "100%"
         }
     },
     tableTitle:
     {
-        fontFamily:"'Oswald', sans-serif",
-        fontWeight:"400",
-        textAlign:"left"
+        fontFamily: "'Oswald', sans-serif",
+        fontWeight: "400",
+        textAlign: "left"
+    },
+    game_main_characteristic:
+    {
+        display:"flex",
+        marginBottom:"12px",
+        
+        padding:"12px"
     }
 
 
 }))
 
-export default function TableListEvent(props) {
-    const {userRole} = props;
-    const {eventState} = props;
-    const { eventId } = props
-    const { group } = props;
-    const { leads } = props;
-    
-    const { onLeadChange } = props;
-    const { tableNumber } = props;
-    const { onSelectOpen } = props;
-    const { outerValue } = props;
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [selectedLeadData, setSelectedLeadData] = useState();
-    const [leadData, setLeadData] = useState();
+export default function GameBlank(props) {
+    const { table } = props;
+    const {date} = props;
+    const {placeId} = props;
     const styles = useStyles();
+    const [gameMembersData, setGameMembersData] = useState([]);
+    const [gameNumber, setGameNumber] = useState(1);
+
+    const handlePropertyChanged = (userId, field) => {
+        setGameMembersData(prevGameMembersData => {
+            const updatedGameMembersData = [...prevGameMembersData];
     
-    const handleLeadChange = (value) => {
-        onLeadChange(value, tableNumber);
+            const index = updatedGameMembersData.findIndex(user => user.userId === userId);
+    
+            if (field.name === "isActive") {
+                if (field.value === true) {
+                    if (index === -1) {
+                        updatedGameMembersData.push({
+                            userId: userId,
+                            compensation: 0,
+                            fouls: 0,
+                            extra: 0,
+                            penalty: 0,
+                            role: 1,
+                            statement: 0,
+                            position: 1
+                        });
+                    }
+                } else {
+                    if (index !== -1) {
+                        updatedGameMembersData.splice(index, 1);
+                    }
+                }
+            } else {
+                if (index !== -1) {
+                    switch (field.name) {
+                        case "compensation":
+                            updatedGameMembersData[index].compensation = parseInt(field.value);
+                            break;
+                        case "fouls":
+                            updatedGameMembersData[index].fouls = parseInt(field.value);
+                            break;
+                        case "extra":
+                            updatedGameMembersData[index].extra = parseInt(field.value);
+                            break;
+                        case "penalty":
+                            updatedGameMembersData[index].penalty = parseInt(field.value);
+                            break;
+                        case "role":
+                            updatedGameMembersData[index].role = field.value;
+                            break;
+                        case "statement":
+                            updatedGameMembersData[index].statement = field.value;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+    
+            return updatedGameMembersData;
+        });
+    };
+
+    const handleGameNumberChange = (event) => 
+    {
+        setGameNumber(event.target.value);
     }
 
-    const handleSelectLeadOpen = () => {
-        onSelectOpen();
+    const handleSaveGame = async () =>
+    {
+        var updates = {game:
+        {
+            lead:table[0].leadId,
+            place:placeId,
+            date:date,
+            gameTable:parseInt(table[0].tableNumber),
+            gameNumber:parseInt(gameNumber),
+            gameType:100,
+            gameResult:20,
+            gameCheck:false,
+        },
+        gamemembers:gameMembersData}
+        
+        var result = await DataAccessService.SaveGame(updates);
+          if (result)
+          {
+              console.log("success");
+          }
     }
 
-    const handleConfirmDialogOpen = () => {
-
-        setDialogOpen(true);
-    }
-
-    const handleConfirmDialogConfirm = async () => {
-        var result = await DataAccessService.patchUsersInEventByEventIdAndTableNo(eventId, tableNumber, { leadId: outerValue });
-        if (result) {
-            console.log("SettedSuccessfull");
-        }
-        setDialogOpen(false);
-    }
-
-    const handleConfirmDialogClose = () => {
-        setDialogOpen(false);
-    }
-
-    useEffect(() => {
-
-
-        if (outerValue && leads) {
-            
-            var index = leads.findIndex(lead => lead.id === outerValue);
-            console.log(index);
-            console.log(leads);
-            setSelectedLeadData(leads[index].nickname);
-        }
-    }, [leads]);
-
-
-  
-   
     return (
         <>
             <div>
-                <div key={tableNumber}>
-                    <h1 className={styles.text_light + " " + styles.tableTitle}>СТОЛ №{tableNumber}:</h1>
-                   { userRole === "ROLE_ADMIN" && eventState === "Не начато" && (<div className={styles.leadSelect}>
-                        <div className={styles.leadSelectInput}><SelectLabels label="Ведущий" onOpen={handleSelectLeadOpen} onChange={handleLeadChange} value={outerValue} items={leads ? convertUsersForSelectComponent(leads) : []} /></div>
-                        <Button variant="outlined" style={{ color: "#EBE5D7" }} onClick={handleConfirmDialogOpen}>Назначить</Button>
-                    </div>)}
-                    {userRole === "ROLE_ADMIN" && eventState === "Начато" && (<div className={styles.leadSelect}>
-                        <h1 className={styles.text_light + " " + styles.tableTitle}>Ведущий: {selectedLeadData}</h1>
-                    </div>)}
-                    {userRole !== "ROLE_ADMIN" && ( <div className={styles.leadSelect}>
-                        <h1 className={styles.text_light + " " + styles.tableTitle}>Ведущий: {selectedLeadData}</h1>
-                    </div>)}
-                    {group?.map(member => (
-                        <UserSearchResultCard
-                            data={member.user[0]}
+                <div>
+                    <h1 className={styles.text_light + " " + styles.tableTitle}>СТОЛ №{table[0].tableNumber}:</h1>
+                    <Card className={styles.game_main_characteristic} sx={{background:"#484848"}} >
+                    <TextField required
+                                    onChange={handleGameNumberChange}
+                                    value={gameNumber}
+                                    label="НОМЕР ИГРЫ"
+                                    type="number"
+                                    InputLabelProps={
+                                        {
+                                            shrink: true,
+                                            sx: {
+                                                color: "#EBE5D7",
+                                                '&.Mui-focused':
+                                                {
+                                                    color: "#EBE5D7",
+                                                }
+                                            }
+                                        }
+                                     
+                                    }
+                                    InputProps={{
+                                        sx: {
+                                            '& .MuiInputBase-input':
+                                            {
+                                                color: "#EBE5D7",
+                                                fontSize: "14pt",
+                                            },
+                                          
+                                        },
+                                    }}
+
+                                />
+
+                    </Card>
+                    {table?.map(member => (
+                        <GameMemberForm data={member.user[0]} propertyChanged={handlePropertyChanged}
                             key={member.user[0].id}
                         />
                     ))}
+                    <div>
+                        <Button variant="outlined">Начать новую игру</Button>
+                        <Button onClick={handleSaveGame} variant="outlined">Сохранить игру</Button></div>
                 </div>
             </div>
-            <ConfirmDialog open={dialogOpen} OkTitle={"Да"} CancelTitle={"Нет"} onCancel={handleConfirmDialogClose} onConfirm={handleConfirmDialogConfirm} title="Ведущий"
-                info="Назначить ведущего?"
-            /></>
+        </>
     );
 }

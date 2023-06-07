@@ -72,6 +72,21 @@ export const USER_NAME_SESSION_ATTRIBUTE_NAME = 'authenticatedUserId';
         return data;
   }
 
+
+  static async getUserId() {
+    var response = await fetch('http://localhost:8080/loggedUserId', {
+            credentials: 'include',
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+            
+        var data = await response.json();
+       
+        return data;
+  }
+
   static async getCurrentLoggedUserSimpleData() {
     var response = await fetch('http://localhost:8080/security/simple_principal', {
             credentials: 'include',

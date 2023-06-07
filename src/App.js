@@ -15,12 +15,21 @@ import RatingPage from './pages/rating_page';
 import AdminPage from './pages/admin_page';
 import EventPage from './pages/event_page';
 import EventsArchivePage from './pages/events_archive_page';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 function App() {
   const location = useLocation();
-
+  const theme = createTheme({
+    palette: {
+      primary: {
+        // Purple and green play nicely together.
+        main: "#EBE5D7",
+      },
+     
+    },
+  });
 
   return (
-
+    <ThemeProvider theme={theme}>
     <div className="App">
 
       {(location.pathname === '/auth') ||(location.pathname === '/forbidden')  ? null : <Header2 />}
@@ -68,6 +77,7 @@ function App() {
       </Routes>
 
     </div>
+    </ThemeProvider>
   );
 }
 
